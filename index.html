@@ -1,0 +1,2539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>倒计时器</title>
+    <style>
+        :root{
+            --bg1:#0f172a;
+            --bg2:#1e293b;
+            --glow-1:rgba(96,165,250,.35);
+            --glow-2:rgba(139,92,246,.28);
+            --card:rgba(255,255,255,.12);
+            --card-border:rgba(255,255,255,.18);
+            --text:#eef2ff;
+            --muted:#cbd5e1;
+            --primary:#60a5fa;
+            --primary-2:#8b5cf6;
+            --accent-soft-1:rgba(96,165,250,.22);
+            --accent-soft-2:rgba(139,92,246,.18);
+            --accent-card:rgba(96,165,250,.08);
+            --accent-card-hover:rgba(96,165,250,.14);
+            --accent-card-border:rgba(96,165,250,.18);
+            --accent-card-border-hover:rgba(96,165,250,.28);
+            --focus-ring:rgba(96,165,250,.15);
+            --focus-border:rgba(96,165,250,.7);
+            --card-hover-border:rgba(96,165,250,.22);
+            --card-hover-bg:rgba(255,255,255,.14);
+            --danger:#fb7185;
+            --success:#34d399;
+            --warning:#fbbf24;
+            --shadow:0 20px 50px rgba(0,0,0,.25);
+            --radius:22px;
+            --control-height:60px;
+        }
+
+        * { box-sizing: border-box; }
+        body{
+            margin:0;
+            min-height:100vh;
+            color:var(--text);
+            font-family: "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+            background:
+                radial-gradient(circle at top left, var(--glow-1), transparent 30%),
+                radial-gradient(circle at top right, var(--glow-2), transparent 30%),
+                linear-gradient(135deg, var(--bg1), var(--bg2));
+            transition:background .45s ease, color .3s ease;
+        }
+
+        .container{
+            width:min(1120px, calc(100% - 32px));
+            margin:32px auto;
+        }
+
+        .hero{
+            display:grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap:24px;
+            align-items:stretch;
+        }
+
+        .panel{
+            background:var(--card);
+            border:1px solid var(--card-border);
+            -webkit-backdrop-filter: blur(18px);
+            backdrop-filter: blur(18px);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease;
+        }
+
+        .hero-left{
+            padding:28px;
+        }
+
+        .hero-right{
+            padding:22px;
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+            gap:16px;
+        }
+
+        h1{
+            margin:0 0 10px;
+            font-size:clamp(28px, 4vw, 42px);
+            line-height:1.1;
+        }
+
+        .sub{
+            margin:0;
+            color:var(--muted);
+            font-size:15px;
+            line-height:1.7;
+        }
+
+        .stats{
+            display:grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap:14px;
+            margin-top:24px;
+        }
+
+        .stat{
+            padding:16px;
+            border-radius:18px;
+            background:rgba(255,255,255,.08);
+            border:1px solid rgba(255,255,255,.12);
+            transition:transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease;
+        }
+
+        .stat .v{
+            font-size:28px;
+            font-weight:700;
+            margin-bottom:6px;
+        }
+
+        .stat .k{
+            color:var(--muted);
+            font-size:13px;
+        }
+
+        .clock{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            min-height:138px;
+            border-radius:20px;
+            background:
+                linear-gradient(135deg, var(--accent-soft-1), var(--accent-soft-2));
+            border:1px solid rgba(255,255,255,.12);
+            font-size:clamp(28px, 5vw, 44px);
+            font-weight:800;
+            letter-spacing:2px;
+        }
+
+        .today{
+            color:var(--muted);
+            text-align:center;
+            font-size:14px;
+        }
+
+        .today-extra{
+            color:var(--muted);
+            text-align:center;
+            font-size:13px;
+            line-height:1.7;
+            letter-spacing:.02em;
+        }
+
+        .form-wrap{
+            margin-top:24px;
+            padding:24px;
+        }
+
+        .toolbar{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:18px;
+        }
+
+        .toolbar-group{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+
+        .theme-switcher{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+
+        .theme-cluster{
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            align-items:center;
+            padding:8px 10px;
+            border-radius:999px;
+            background:rgba(255,255,255,.05);
+            border:1px solid rgba(255,255,255,.08);
+        }
+
+        .theme-label{
+            color:var(--muted);
+            font-size:13px;
+        }
+
+        .mode-btn{
+            border:none;
+            min-width:58px;
+            padding:7px 12px;
+            border-radius:999px;
+            background:rgba(255,255,255,.08);
+            border:1px solid rgba(255,255,255,.12);
+            color:var(--text);
+            cursor:pointer;
+            font-size:13px;
+            transition:background .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease;
+        }
+
+        .mode-btn.active{
+            background:linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-color:transparent;
+            box-shadow:0 8px 18px var(--accent-card-hover);
+        }
+
+        .theme-btn{
+            position:relative;
+            min-width:64px;
+            height:30px;
+            padding:0 10px 0 8px;
+            border-radius:999px;
+            border:1px solid rgba(255,255,255,.14);
+            cursor:pointer;
+            transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease, opacity .2s ease, background .2s ease, color .2s ease;
+            box-shadow:0 6px 14px rgba(15,23,42,.18);
+            opacity:.95;
+            background:rgba(255,255,255,.08);
+            color:var(--text);
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            font-size:12px;
+            font-weight:600;
+        }
+
+        .theme-btn:hover{
+            transform:scale(1.08);
+            opacity:1;
+        }
+
+        .theme-btn.active{
+            border-color:rgba(255,255,255,.82);
+            background:rgba(255,255,255,.16);
+            box-shadow:0 0 0 4px rgba(255,255,255,.12), 0 8px 18px rgba(15,23,42,.24);
+            opacity:1;
+        }
+
+        .theme-btn::before{
+            content:"";
+            width:16px;
+            height:16px;
+            flex:0 0 16px;
+            border-radius:50%;
+            box-shadow:inset 0 0 0 1px rgba(255,255,255,.24), 0 2px 8px rgba(15,23,42,.2);
+        }
+
+        .theme-btn::after{
+            content:attr(data-label);
+            line-height:1;
+            white-space:nowrap;
+        }
+
+        .theme-btn.aurora::before{ background:linear-gradient(135deg,#60a5fa,#8b5cf6); }
+        .theme-btn.sunset::before{ background:linear-gradient(135deg,#fb7185,#f59e0b); }
+        .theme-btn.forest::before{ background:linear-gradient(135deg,#34d399,#0f766e); }
+        .theme-btn.ocean::before{ background:linear-gradient(135deg,#38bdf8,#2563eb); }
+        .theme-btn.festival::before{ background:conic-gradient(from 160deg,#ef4444,#f59e0b,#facc15,#ef4444); }
+        .theme-btn.exam::before{ background:linear-gradient(135deg,#6366f1 0 50%,#22c55e 50% 100%); }
+        .theme-btn.tech::before{ background:repeating-linear-gradient(135deg,#06b6d4 0 6px,#7c3aed 6px 12px); }
+
+        body.light-theme{
+            --card:rgba(255,255,255,.68);
+            --card-border:rgba(148,163,184,.28);
+            --text:#0f172a;
+            --muted:#475569;
+            --shadow:0 18px 42px rgba(148,163,184,.18);
+        }
+
+        body.light-theme .panel,
+        body.light-theme .stat,
+        body.light-theme .clock,
+        body.light-theme .card,
+        body.light-theme .time-spinner,
+        body.light-theme .theme-cluster,
+        body.light-theme .datetime-divider::before,
+        body.light-theme .empty,
+        body.light-theme .remark,
+        body.light-theme .progress,
+        body.light-theme .tab,
+        body.light-theme .mode-btn,
+        body.light-theme input,
+        body.light-theme textarea{
+            -webkit-backdrop-filter:blur(18px);
+            backdrop-filter:blur(18px);
+        }
+
+        body.light-theme .stat,
+        body.light-theme .tab,
+        body.light-theme .mode-btn,
+        body.light-theme input,
+        body.light-theme textarea,
+        body.light-theme .time-spinner,
+        body.light-theme .theme-cluster,
+        body.light-theme .empty,
+        body.light-theme .remark,
+        body.light-theme .progress{
+            background:rgba(255,255,255,.54);
+            border-color:rgba(148,163,184,.26);
+        }
+
+        body.light-theme .spinner-group.date-group .time-spinner{
+            background:rgba(255,255,255,.86);
+            border-color:rgba(148,163,184,.34);
+            box-shadow:0 10px 20px rgba(148,163,184,.1);
+        }
+
+        body.light-theme .spinner-group.time-group .time-spinner,
+        body.light-theme .datetime-divider.time-divider::before{
+            background:rgba(255,255,255,.92);
+            border-color:rgba(99,102,241,.22);
+            box-shadow:0 10px 22px rgba(148,163,184,.12);
+        }
+
+        body.light-theme .clock{
+            border-color:rgba(148,163,184,.22);
+        }
+
+        body.light-theme .today,
+        body.light-theme .today-extra{
+            color:#475569;
+        }
+
+        body.light-theme .time-spinner::after{
+            background:rgba(255,255,255,.68);
+            border-color:rgba(148,163,184,.18);
+        }
+
+        body.light-theme .time-spinner-side{
+            color:rgba(71,85,105,.56);
+        }
+
+        body.light-theme .datetime-divider{
+            color:#475569;
+        }
+
+        body.light-theme .datetime-divider.date-divider::before{
+            background:rgba(255,255,255,.84);
+            border-color:rgba(148,163,184,.24);
+            box-shadow:0 8px 18px rgba(148,163,184,.12);
+        }
+
+        body.light-theme .badge{
+            background:rgba(15,23,42,.08);
+            border-color:rgba(148,163,184,.18);
+            color:#0f172a;
+        }
+
+        body.light-theme .badge.running{ background:rgba(52,211,153,.18); color:#065f46; }
+        body.light-theme .badge.done{ background:rgba(251,113,133,.16); color:#9f1239; }
+
+        body.light-theme .mini.danger{
+            color:#9f1239;
+            border-color:rgba(244,114,182,.2);
+        }
+
+        body.light-theme .mini.edit{
+            color:#1d4ed8;
+            border-color:rgba(96,165,250,.24);
+            background:rgba(96,165,250,.12);
+        }
+
+        body.light-theme .btn.secondary{
+            color:var(--text);
+            background:rgba(255,255,255,.54);
+            border-color:rgba(148,163,184,.26);
+        }
+
+        body.light-theme .section-title,
+        body.light-theme .card .title,
+        body.light-theme .card .remain{
+            color:#0f172a;
+        }
+
+        body.light-theme .card.is-done .remain,
+        body.light-theme .card:hover.is-done .remain{
+            color:#0f172a;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.88), rgba(255,255,255,.76)),
+                linear-gradient(135deg, var(--accent-soft-1), var(--accent-soft-2));
+            border-color:var(--accent-card-border-hover);
+            box-shadow:0 12px 28px rgba(148,163,184,.18), inset 0 1px 0 rgba(255,255,255,.9);
+        }
+
+        body.light-theme .list-toolbar .section-title{
+            display:inline-flex;
+            align-items:center;
+            min-height:48px;
+            padding:8px 18px;
+            border-radius:16px;
+            background:rgba(255,255,255,.88);
+            border:1px solid rgba(148,163,184,.22);
+            box-shadow:0 10px 24px rgba(148,163,184,.16);
+            color:#020617;
+            text-shadow:0 1px 0 rgba(255,255,255,.55);
+        }
+
+        body.light-theme .card{
+            background:rgba(255,255,255,.78);
+            border-color:rgba(148,163,184,.24);
+            box-shadow:0 16px 32px rgba(148,163,184,.16);
+        }
+
+        body.light-theme .card .meta{
+            color:#475569;
+        }
+
+        body.light-theme .card .remark{
+            color:#1e293b;
+            background:rgba(255,255,255,.74);
+            border-color:rgba(148,163,184,.2);
+        }
+
+        body.light-theme .card .progress{
+            background:rgba(226,232,240,.72);
+            border-color:rgba(148,163,184,.18);
+        }
+
+        body.light-theme .modal-backdrop{
+            background:rgba(148,163,184,.34);
+        }
+
+        body.light-theme .modal-card{
+            background:rgba(255,255,255,.92);
+            border-color:rgba(148,163,184,.22);
+            box-shadow:0 20px 44px rgba(148,163,184,.22);
+        }
+
+        body.light-theme .sort-group label,
+        body.light-theme .toolbar-group .tab,
+        body.light-theme .sort-btn{
+            color:#334155;
+        }
+
+        body.light-theme .tab,
+        body.light-theme .mode-btn,
+        body.light-theme .sort-btn{
+            background:rgba(255,255,255,.82);
+            border-color:rgba(148,163,184,.24);
+            box-shadow:0 6px 14px rgba(148,163,184,.1);
+        }
+
+        body.light-theme .tab.active,
+        body.light-theme .mode-btn.active,
+        body.light-theme .sort-btn.active{
+            color:#ffffff;
+            background:linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-color:transparent;
+            box-shadow:0 0 0 4px var(--focus-ring), 0 14px 28px rgba(148,163,184,.24);
+        }
+
+        body.light-theme .toolbar-group .tab:not(.active):hover,
+        body.light-theme .sort-btn:not(.active):hover,
+        body.light-theme .mode-btn:not(.active):hover{
+            color:#0f172a;
+            background:rgba(255,255,255,.96);
+        }
+
+        body.light-theme .sort-group{
+            background:rgba(255,255,255,.72);
+            border-color:rgba(148,163,184,.22);
+            box-shadow:0 8px 18px rgba(148,163,184,.12);
+        }
+
+        body.light-theme .sort-btn{
+            min-width:92px;
+        }
+
+        body.light-theme .theme-btn{
+            background:rgba(255,255,255,.72);
+            border-color:rgba(148,163,184,.24);
+            color:#334155;
+            box-shadow:0 8px 18px rgba(148,163,184,.14);
+        }
+
+        body.light-theme .theme-btn.active{
+            background:rgba(255,255,255,.96);
+            border-color:var(--focus-border);
+            box-shadow:0 0 0 4px var(--focus-ring), 0 12px 24px rgba(148,163,184,.2);
+        }
+
+        body.light-theme .tab:hover:not(.active),
+        body.light-theme .mode-btn:hover:not(.active),
+        body.light-theme .theme-btn:hover,
+        body.light-theme input:hover,
+        body.light-theme textarea:hover,
+        body.light-theme .time-spinner:hover,
+        body.light-theme .stat:hover,
+        body.light-theme .card:hover{
+            border-color:var(--focus-border);
+            box-shadow:0 0 0 3px var(--focus-ring), 0 14px 28px rgba(148,163,184,.22);
+        }
+
+        body.light-theme .card:hover{
+            background:rgba(255,255,255,.94);
+            color:#0f172a;
+        }
+
+        body.light-theme .card:hover .title,
+        body.light-theme .card:hover .remain,
+        body.light-theme .card:hover .meta,
+        body.light-theme .card:hover .remark{
+            color:#0f172a;
+        }
+
+        body.light-theme .card:hover.is-done .remain{
+            color:#0f172a;
+        }
+
+        body.light-theme .card.is-done .remain::before,
+        body.light-theme .card:hover.is-done .remain::before{
+            background:radial-gradient(circle at 35% 35%, rgba(255,255,255,1), rgba(255,255,255,.72) 34%, var(--primary) 35%, var(--primary-2) 100%);
+            box-shadow:0 0 0 4px rgba(255,255,255,.72), 0 6px 16px rgba(148,163,184,.18);
+        }
+
+        body.light-theme .card:hover .meta{
+            color:#475569;
+        }
+
+        body.light-theme .time-spinner:hover{
+            background:rgba(255,255,255,.98);
+        }
+
+        body.light-theme .time-spinner:hover::after{
+            background:rgba(255,255,255,.94);
+            border-color:var(--focus-border);
+        }
+
+        .tab{
+            border:none;
+            color:var(--text);
+            background:rgba(255,255,255,.08);
+            border:1px solid rgba(255,255,255,.12);
+            padding:10px 16px;
+            border-radius:999px;
+            cursor:pointer;
+            transition:.2s ease;
+            font-size:14px;
+        }
+
+        .tab.active{
+            background:linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-color:transparent;
+            transform:translateY(-1px);
+        }
+
+        .grid{
+            display:grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap:16px;
+        }
+
+        .field{
+            grid-column: span 12;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+        }
+
+        .field.col-6{ grid-column: span 6; }
+        .field.col-3{ grid-column: span 3; }
+
+        .field.compact input{
+            min-height:52px;
+            padding:8px 16px;
+        }
+
+        label{
+            font-size:14px;
+            color:var(--muted);
+        }
+
+        input,
+        textarea,
+        select{
+            width:100%;
+            padding:10px 16px;
+            min-height:var(--control-height);
+            border-radius:16px;
+            border:1px solid rgba(255,255,255,.12);
+            outline:none;
+            color:var(--text);
+            background:rgba(255,255,255,.08);
+            font-size:15px;
+            transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+
+        input:hover,
+        textarea:hover,
+        select:hover{
+            background:rgba(255,255,255,.16);
+            border-color:rgba(255,255,255,.3);
+            box-shadow:0 0 0 3px rgba(255,255,255,.05), 0 12px 24px rgba(15,23,42,.2);
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus{
+            border-color:var(--focus-border);
+            box-shadow:0 0 0 4px var(--focus-ring);
+        }
+
+        textarea{
+            min-height:96px;
+            resize:vertical;
+        }
+
+        .field-hint{
+            margin:0;
+            color:var(--muted);
+            font-size:12px;
+            line-height:1.5;
+        }
+
+        .datetime-combo{
+            display:flex;
+            flex-direction:row;
+            align-items:flex-start;
+            gap:12px;
+            width:max-content;
+            max-width:100%;
+        }
+
+        .spinner-group{
+            display:flex;
+            flex-wrap:nowrap;
+            gap:12px;
+            align-items:stretch;
+        }
+
+        .duration-combo{
+            display:flex;
+            flex-wrap:wrap;
+            gap:12px;
+            width:max-content;
+            max-width:100%;
+        }
+
+        .spinner-group.date-group .time-spinner{
+            background:rgba(255,255,255,.07);
+        }
+
+        .spinner-group.time-group .time-spinner{
+            background:var(--accent-card);
+        }
+
+        .datetime-divider{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            min-height:var(--control-height);
+            padding:0 4px;
+            color:rgba(238,242,255,.72);
+            font-size:13px;
+            font-weight:700;
+            letter-spacing:.08em;
+            white-space:nowrap;
+            transition:opacity .25s ease, filter .25s ease;
+        }
+
+        .datetime-divider.date-divider::before{
+            content:"日期";
+            padding:8px 10px;
+            border-radius:999px;
+            background:rgba(255,255,255,.08);
+            border:1px solid rgba(255,255,255,.1);
+        }
+
+        .datetime-divider.time-divider::before{
+            content:"时间";
+            padding:8px 10px;
+            border-radius:999px;
+            background:var(--accent-card);
+            border:1px solid var(--accent-card-border);
+        }
+
+        .time-spinner{
+            position:relative;
+            width:96px;
+            height:var(--control-height);
+            min-height:var(--control-height);
+            padding:4px 8px;
+            border-radius:16px;
+            border:1px solid rgba(255,255,255,.12);
+            background:rgba(255,255,255,.08);
+            display:grid;
+            grid-template-rows:1fr 30px 1fr;
+            justify-items:center;
+            align-items:center;
+            overflow:hidden;
+            transition:border-color .22s ease, background .22s ease, box-shadow .22s ease;
+        }
+
+        .time-spinner.year-spinner{
+            width:124px;
+        }
+
+        .time-spinner.duration-day-spinner{
+            width:124px;
+        }
+
+        .time-spinner.duration-day-spinner input{
+            width:3ch;
+            font-size:22px;
+        }
+
+        .time-spinner.month-spinner,
+        .time-spinner.day-spinner{
+            width:92px;
+        }
+
+        .time-spinner::after{
+            content:"";
+            position:absolute;
+            left:8px;
+            right:8px;
+            top:50%;
+            height:28px;
+            transform:translateY(-50%);
+            border-radius:12px;
+            background:rgba(255,255,255,.06);
+            border:1px solid rgba(255,255,255,.08);
+            pointer-events:none;
+            transition:background .22s ease, border-color .22s ease, transform .22s ease;
+        }
+
+        .time-spinner-side{
+            position:relative;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            width:100%;
+            min-height:12px;
+            z-index:1;
+            font-size:12px;
+            line-height:1;
+            color:rgba(238,242,255,.28);
+            -webkit-user-select:none;
+            user-select:none;
+            pointer-events:none;
+        }
+
+        .time-spinner-side.is-empty{
+            opacity:0;
+        }
+
+        .time-spinner-main{
+            position:relative;
+            z-index:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:4px;
+            height:30px;
+            transform:translateY(-1px);
+        }
+
+        .time-spinner input{
+            width:2ch;
+            padding:0;
+            border:none;
+            border-radius:0;
+            background:transparent;
+            box-shadow:none;
+            text-align:center;
+            min-height:28px;
+            font-size:24px;
+            font-weight:800;
+            line-height:28px;
+            letter-spacing:0;
+            cursor:ns-resize;
+            display:block;
+        }
+
+        .time-spinner.year-spinner input{
+            width:4ch;
+            font-size:22px;
+        }
+
+        .time-spinner input:focus{
+            box-shadow:none;
+        }
+
+        .time-spinner:hover{
+            border-color:rgba(255,255,255,.34);
+            background:rgba(255,255,255,.16);
+            box-shadow:0 0 0 3px rgba(255,255,255,.04), 0 14px 28px rgba(15,23,42,.24);
+        }
+
+        .spinner-group.time-group .time-spinner:hover{
+            background:var(--accent-card-hover);
+            border-color:var(--accent-card-border-hover);
+            box-shadow:0 0 0 3px var(--focus-ring), 0 14px 28px rgba(15,23,42,.24);
+        }
+
+        .spinner-group.date-group .time-spinner:hover,
+        .duration-combo .time-spinner:hover{
+            background:rgba(255,255,255,.12);
+        }
+
+        .time-spinner:hover::after{
+            background:rgba(255,255,255,.14);
+            border-color:rgba(255,255,255,.22);
+        }
+
+        .time-spinner-unit{
+            display:inline-flex;
+            align-items:center;
+            height:28px;
+            font-size:12px;
+            color:var(--muted);
+            font-weight:600;
+            margin:0;
+            line-height:1;
+        }
+
+        .mode-datetime{
+            align-items:flex-start;
+        }
+
+        .mode-datetime .field-hint{
+            max-width:520px;
+        }
+
+        .time-spinner.dragging{
+            border-color:var(--focus-border);
+            box-shadow:0 0 0 4px var(--focus-ring);
+        }
+
+        .actions{
+            margin-top:18px;
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+
+        .btn{
+            border:none;
+            padding:13px 18px;
+            border-radius:16px;
+            cursor:pointer;
+            font-size:15px;
+            color:white;
+            transition:box-shadow .2s ease, background .2s ease, border-color .2s ease, filter .2s ease;
+        }
+
+        .btn:hover{ filter:brightness(1.04); }
+        .btn.primary{
+            background:linear-gradient(135deg, var(--primary), var(--primary-2));
+            box-shadow:0 10px 22px var(--accent-card-hover);
+        }
+        .btn.secondary{
+            background:rgba(255,255,255,.1);
+            border:1px solid rgba(255,255,255,.12);
+        }
+
+        .section-title{
+            margin:28px 0 14px;
+            font-size:20px;
+        }
+
+        .list-toolbar{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            flex-wrap:wrap;
+            margin:28px 0 14px;
+        }
+
+        .list-toolbar .section-title{
+            margin:0;
+        }
+
+        .sort-wrap{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+
+        .sort-group{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            flex-wrap:wrap;
+            padding:10px 12px;
+            border-radius:18px;
+            background:rgba(255,255,255,.06);
+            border:1px solid rgba(255,255,255,.1);
+        }
+
+        .sort-group label{
+            font-size:13px;
+            white-space:nowrap;
+        }
+
+        .sort-options{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            flex-wrap:wrap;
+        }
+
+        .sort-btn{
+            border:none;
+            min-width:84px;
+            min-height:40px;
+            padding:8px 14px;
+            border-radius:999px;
+            background:rgba(255,255,255,.08);
+            border:1px solid rgba(255,255,255,.12);
+            color:var(--text);
+            cursor:pointer;
+            font-size:13px;
+            transition:background .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease;
+        }
+
+        .sort-btn.active{
+            background:linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-color:transparent;
+            box-shadow:0 8px 18px var(--accent-card-hover);
+        }
+
+        .list{
+            display:grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap:18px;
+        }
+
+        .card{
+            grid-column: span 6;
+            padding:20px;
+            position:relative;
+            overflow:hidden;
+            transition:box-shadow .28s ease, border-color .28s ease, background .28s ease;
+        }
+
+        .card::after{
+            content:"";
+            position:absolute;
+            inset:auto -40px -40px auto;
+            width:120px;
+            height:120px;
+            border-radius:50%;
+            background:radial-gradient(circle, rgba(255,255,255,.18), transparent 70%);
+            pointer-events:none;
+        }
+
+        .card-header{
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            align-items:flex-start;
+            margin-bottom:14px;
+        }
+
+        .title{
+            font-size:18px;
+            font-weight:700;
+            word-break:break-all;
+        }
+
+        .badge{
+            white-space:nowrap;
+            font-size:12px;
+            padding:6px 10px;
+            border-radius:999px;
+            color:white;
+            background:rgba(255,255,255,.12);
+            border:1px solid rgba(255,255,255,.14);
+        }
+
+        .badge.running{ background:rgba(52,211,153,.18); color:#d1fae5; }
+        .badge.done{ background:rgba(251,113,133,.18); color:#ffe4e6; }
+
+        .remain{
+            font-size:clamp(24px, 3vw, 34px);
+            font-weight:800;
+            letter-spacing:1px;
+            margin:8px 0 12px;
+        }
+
+        .card.is-done .remain{
+            display:inline-flex;
+            align-items:center;
+            gap:10px;
+            padding:10px 16px;
+            border-radius:18px;
+            color:var(--text);
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04)),
+                linear-gradient(135deg, var(--accent-soft-1), var(--accent-soft-2));
+            border:1px solid var(--accent-card-border-hover);
+            box-shadow:0 12px 28px rgba(15,23,42,.18), inset 0 1px 0 rgba(255,255,255,.14);
+            text-shadow:0 1px 0 rgba(255,255,255,.06);
+        }
+
+        .card.is-done .remain::before{
+            content:"";
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:14px;
+            height:14px;
+            border-radius:999px;
+            background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.95), rgba(255,255,255,.5) 35%, var(--primary) 36%, var(--primary-2) 100%);
+            box-shadow:0 0 0 4px rgba(255,255,255,.08), 0 0 18px var(--accent-card-border-hover);
+            flex:0 0 14px;
+        }
+
+        .meta{
+            display:grid;
+            gap:6px;
+            color:var(--muted);
+            font-size:13px;
+            margin-bottom:14px;
+        }
+
+        .remark{
+            margin:0 0 14px;
+            padding:12px 14px;
+            border-radius:14px;
+            background:rgba(255,255,255,.08);
+            border:1px solid rgba(255,255,255,.1);
+            color:var(--text);
+            line-height:1.7;
+            white-space:pre-wrap;
+            word-break:break-word;
+        }
+
+        .progress{
+            height:10px;
+            border-radius:999px;
+            overflow:hidden;
+            background:rgba(255,255,255,.08);
+            margin-bottom:14px;
+            border:1px solid rgba(255,255,255,.1);
+        }
+
+        .bar{
+            height:100%;
+            width:0%;
+            background:linear-gradient(90deg, var(--primary), var(--primary-2));
+            transition:width .6s ease;
+        }
+
+        .card-actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+        }
+
+        .mini{
+            padding:9px 12px;
+            font-size:13px;
+            border-radius:12px;
+        }
+
+        .mini.danger{
+            background:rgba(251,113,133,.16);
+            color:#ffe4e6;
+            border:1px solid rgba(251,113,133,.25);
+        }
+
+        .mini.edit{
+            background:rgba(96,165,250,.16);
+            color:#dbeafe;
+            border:1px solid rgba(96,165,250,.25);
+        }
+
+        .modal-backdrop{
+            position:fixed;
+            inset:0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+            background:rgba(15,23,42,.56);
+            z-index:50;
+        }
+
+        .modal-backdrop.hidden{
+            display:none !important;
+        }
+
+        .modal-card{
+            width:min(560px, 100%);
+            padding:24px;
+        }
+
+        .modal-title{
+            margin:0 0 8px;
+            font-size:24px;
+        }
+
+        .modal-sub{
+            margin:0 0 18px;
+            color:var(--muted);
+            font-size:13px;
+            line-height:1.6;
+        }
+
+        .modal-grid{
+            display:grid;
+            gap:14px;
+        }
+
+        .modal-mode-switch{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-bottom:4px;
+        }
+
+        .modal-duration-grid{
+            display:grid;
+            grid-template-columns:repeat(4, minmax(0, 1fr));
+            gap:12px;
+        }
+
+        .modal-duration-grid input{
+            text-align:center;
+        }
+
+        .modal-actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top:18px;
+            flex-wrap:wrap;
+        }
+
+        .datetime-native{
+            font-family:inherit;
+        }
+
+        @media (max-width: 640px){
+            .modal-duration-grid{
+                grid-template-columns:repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .empty{
+            padding:30px;
+            text-align:center;
+            color:var(--muted);
+            border:1px dashed rgba(255,255,255,.16);
+            border-radius:20px;
+            grid-column:1 / -1;
+            background:rgba(255,255,255,.05);
+        }
+
+        .hidden{ display:none !important; }
+
+        @media (hover: hover){
+            .panel:hover{
+                border-color:rgba(255,255,255,.3);
+                box-shadow:0 18px 36px rgba(15,23,42,.26);
+            }
+
+            .stat:hover{
+                background:rgba(255,255,255,.16);
+                border-color:rgba(255,255,255,.28);
+                box-shadow:0 0 0 3px rgba(255,255,255,.04), 0 14px 28px rgba(15,23,42,.22);
+            }
+
+            .tab:hover:not(.active){
+                background:rgba(255,255,255,.16);
+                border-color:rgba(255,255,255,.28);
+                box-shadow:0 0 0 3px rgba(255,255,255,.04), 0 12px 24px rgba(15,23,42,.18);
+            }
+
+            .mode-btn:hover:not(.active),
+            .sort-btn:hover:not(.active),
+            .theme-btn:hover,
+            .sort-group:hover{
+                border-color:rgba(255,255,255,.26);
+                box-shadow:0 0 0 3px rgba(255,255,255,.04), 0 12px 24px rgba(15,23,42,.18);
+            }
+
+            .datetime-divider:hover{
+                opacity:.95;
+                filter:brightness(1.14);
+            }
+
+            .card:hover{
+                border-color:var(--card-hover-border);
+                background:var(--card-hover-bg);
+                box-shadow:0 0 0 3px var(--focus-ring), 0 20px 40px rgba(15,23,42,.26);
+            }
+        }
+
+        @media (max-width: 900px){
+            .hero{ grid-template-columns:1fr; }
+            .card{ grid-column: span 12; }
+            .field.col-6, .field.col-3{ grid-column: span 12; }
+            .stats{ grid-template-columns:1fr; }
+            .datetime-combo{ width:max-content; }
+        }
+
+        @media (max-width: 640px){
+            .datetime-combo,
+            .spinner-group,
+            .duration-combo{
+                width:100%;
+            }
+
+            .datetime-combo{
+                flex-direction:column;
+            }
+
+            .spinner-group{
+                flex-wrap:wrap;
+            }
+
+            .datetime-divider{
+                justify-content:flex-start;
+                min-height:0;
+                padding:0;
+            }
+
+            .time-spinner{
+                width:100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <div class="panel hero-left">
+                <h1>倒计时事件</h1>
+                <p class="sub">
+                    支持两种方式：指定未来具体时间，或输入天 / 时 / 分 / 秒快速创建倒计时。
+                    所有事件自动保存到本地，刷新页面不会丢失。
+                </p>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="v" id="statTotal">0</div>
+                        <div class="k">总事件数</div>
+                    </div>
+                    <div class="stat">
+                        <div class="v" id="statRunning">0</div>
+                        <div class="k">进行中</div>
+                    </div>
+                    <div class="stat">
+                        <div class="v" id="statFinished">0</div>
+                        <div class="k">已结束</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel hero-right">
+                <div class="clock" id="nowClock">00:00:00</div>
+                <div class="today" id="todayText">--</div>
+                <div class="today-extra" id="todayExtraText">--</div>
+            </div>
+        </section>
+
+        <section class="panel form-wrap">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <button class="tab active" data-mode="datetime">按具体时间</button>
+                    <button class="tab" data-mode="duration">按时长倒计时</button>
+                </div>
+                <div class="theme-switcher" aria-label="主题切换">
+                    <div class="theme-cluster" aria-label="明暗模式">
+                        <span class="theme-label">模式</span>
+                        <button class="mode-btn active" type="button" data-appearance="dark">深色</button>
+                        <button class="mode-btn" type="button" data-appearance="light">浅色</button>
+                    </div>
+                    <div class="theme-cluster" aria-label="配色主题">
+                        <span class="theme-label">主题</span>
+                        <button class="theme-btn aurora active" type="button" data-theme="aurora" data-label="极光" aria-label="极光主题" title="极光主题"></button>
+                        <button class="theme-btn sunset" type="button" data-theme="sunset" data-label="落日" aria-label="落日主题" title="落日主题"></button>
+                        <button class="theme-btn forest" type="button" data-theme="forest" data-label="森林" aria-label="森林主题" title="森林主题"></button>
+                        <button class="theme-btn ocean" type="button" data-theme="ocean" data-label="海洋" aria-label="海洋主题" title="海洋主题"></button>
+                        <button class="theme-btn festival" type="button" data-theme="festival" data-label="节日" aria-label="节日主题" title="节日主题"></button>
+                        <button class="theme-btn exam" type="button" data-theme="exam" data-label="考试" aria-label="考试主题" title="考试主题"></button>
+                        <button class="theme-btn tech" type="button" data-theme="tech" data-label="科技" aria-label="科技主题" title="科技主题"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="field compact">
+                    <label for="eventName">事件名称（必填）</label>
+                    <input id="eventName" type="text" placeholder="例如：考试开始、下班、生日、项目发布" maxlength="50" required />
+                </div>
+
+                <div class="field mode-datetime">
+                    <label for="targetYear">目标时间</label>
+                    <div class="datetime-combo">
+                        <div class="datetime-divider date-divider" aria-hidden="true"></div>
+                        <div class="spinner-group date-group">
+                            <div class="time-spinner year-spinner">
+                                <div class="time-spinner-side" id="targetYearPrev"></div>
+                                <div class="time-spinner-main">
+                                    <input id="targetYear" type="text" inputmode="numeric" maxlength="4" data-digits="4" data-part="year" aria-label="目标年份" title="目标年份" />
+                                    <span class="time-spinner-unit">年</span>
+                                </div>
+                                <div class="time-spinner-side" id="targetYearNext"></div>
+                            </div>
+                            <div class="time-spinner month-spinner">
+                                <div class="time-spinner-side" id="targetMonthPrev"></div>
+                                <div class="time-spinner-main">
+                                    <input id="targetMonth" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-part="month" aria-label="目标月份" title="目标月份" />
+                                    <span class="time-spinner-unit">月</span>
+                                </div>
+                                <div class="time-spinner-side" id="targetMonthNext"></div>
+                            </div>
+                            <div class="time-spinner day-spinner">
+                                <div class="time-spinner-side" id="targetDayPrev"></div>
+                                <div class="time-spinner-main">
+                                    <input id="targetDay" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-part="day" aria-label="目标日期" title="目标日期" />
+                                    <span class="time-spinner-unit">日</span>
+                                </div>
+                                <div class="time-spinner-side" id="targetDayNext"></div>
+                            </div>
+                        </div>
+                        <div class="datetime-divider time-divider" aria-hidden="true"></div>
+                        <div class="spinner-group time-group">
+                            <div class="time-spinner">
+                                <div class="time-spinner-side" id="targetHourPrev"></div>
+                                <div class="time-spinner-main">
+                                    <input id="targetHour" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-part="hour" aria-label="目标小时" title="目标小时" />
+                                    <span class="time-spinner-unit">时</span>
+                                </div>
+                                <div class="time-spinner-side" id="targetHourNext"></div>
+                            </div>
+                            <div class="time-spinner">
+                                <div class="time-spinner-side" id="targetMinutePrev"></div>
+                                <div class="time-spinner-main">
+                                    <input id="targetMinute" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-part="minute" aria-label="目标分钟" title="目标分钟" />
+                                    <span class="time-spinner-unit">分</span>
+                                </div>
+                                <div class="time-spinner-side" id="targetMinuteNext"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="field-hint">日期与时间已分组显示；两者都支持直接输入、滚轮调整和上下拖动，且整体不能早于当前时间。</p>
+                </div>
+
+                <div class="field mode-duration hidden">
+                    <label for="days">倒计时时长</label>
+                    <div class="duration-combo">
+                        <div class="time-spinner duration-day-spinner">
+                            <div class="time-spinner-side" id="daysPrev"></div>
+                            <div class="time-spinner-main">
+                                <input id="days" type="text" inputmode="numeric" maxlength="3" data-digits="3" data-duration-part="days" aria-label="天数" title="天数" />
+                                <span class="time-spinner-unit">天</span>
+                            </div>
+                            <div class="time-spinner-side" id="daysNext"></div>
+                        </div>
+                        <div class="time-spinner">
+                            <div class="time-spinner-side" id="hoursPrev"></div>
+                            <div class="time-spinner-main">
+                                <input id="hours" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-duration-part="hours" aria-label="小时" title="小时" />
+                                <span class="time-spinner-unit">时</span>
+                            </div>
+                            <div class="time-spinner-side" id="hoursNext"></div>
+                        </div>
+                        <div class="time-spinner">
+                            <div class="time-spinner-side" id="minutesPrev"></div>
+                            <div class="time-spinner-main">
+                                <input id="minutes" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-duration-part="minutes" aria-label="分钟" title="分钟" />
+                                <span class="time-spinner-unit">分</span>
+                            </div>
+                            <div class="time-spinner-side" id="minutesNext"></div>
+                        </div>
+                        <div class="time-spinner">
+                            <div class="time-spinner-side" id="secondsPrev"></div>
+                            <div class="time-spinner-main">
+                                <input id="seconds" type="text" inputmode="numeric" maxlength="2" data-digits="2" data-duration-part="seconds" aria-label="秒数" title="秒数" />
+                                <span class="time-spinner-unit">秒</span>
+                            </div>
+                            <div class="time-spinner-side" id="secondsNext"></div>
+                        </div>
+                    </div>
+                    <p class="field-hint">时长也支持直接输入、滚轮调整和上下拖动调整。</p>
+                </div>
+
+                <div class="field">
+                    <label for="eventRemark">备注（可选）</label>
+                    <textarea id="eventRemark" placeholder="如果事件名称写不开，可以在这里补充说明" maxlength="200"></textarea>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn primary" id="createBtn">创建倒计时</button>
+                <button class="btn secondary" id="clearFinishedBtn">清除已结束</button>
+            </div>
+        </section>
+
+        <div class="list-toolbar">
+            <h2 class="section-title">我的倒计时</h2>
+            <div class="sort-wrap">
+                <div class="sort-group" aria-label="排列方式">
+                    <label>排列方式</label>
+                    <div class="sort-options">
+                        <button class="sort-btn active" type="button" data-sort-field="endAt">结束时间</button>
+                        <button class="sort-btn" type="button" data-sort-field="createdAt">创建时间</button>
+                    </div>
+                </div>
+                <div class="sort-group" aria-label="升降序">
+                    <label>升降序</label>
+                    <div class="sort-options">
+                        <button class="sort-btn active" type="button" data-sort-order="asc">升序</button>
+                        <button class="sort-btn" type="button" data-sort-order="desc">降序</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <section class="list" id="eventList"></section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="editModal">
+        <div class="panel modal-card">
+            <h3 class="modal-title">编辑倒计时</h3>
+            <p class="modal-sub">可修改事件名称、备注、创建方式，以及对应的结束时间或剩余时长。</p>
+            <div class="modal-grid">
+                <div class="field">
+                    <label>创建方式</label>
+                    <div class="modal-mode-switch">
+                        <button class="tab" type="button" data-edit-mode="datetime">按具体时间</button>
+                        <button class="tab" type="button" data-edit-mode="duration">按时长倒计时</button>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="editEventName">事件名称</label>
+                    <input id="editEventName" type="text" maxlength="50" placeholder="请输入事件名称" />
+                </div>
+                <div class="field" id="editDateTimeField">
+                    <label for="editEventEndTime" id="editTimeLabel">结束时间</label>
+                    <input id="editEventEndTime" class="datetime-native" type="datetime-local" step="60" />
+                </div>
+                <div class="field hidden" id="editDurationField">
+                    <label>剩余时长</label>
+                    <div class="modal-duration-grid">
+                        <input id="editDays" type="number" min="0" max="999" step="1" placeholder="天" />
+                        <input id="editHours" type="number" min="0" max="23" step="1" placeholder="时" />
+                        <input id="editMinutes" type="number" min="0" max="59" step="1" placeholder="分" />
+                        <input id="editSeconds" type="number" min="0" max="59" step="1" placeholder="秒" />
+                    </div>
+                    <p class="field-hint">按时长模式下，编辑的是当前还剩多少时间。</p>
+                </div>
+                <div class="field">
+                    <label for="editEventRemark">备注（可选）</label>
+                    <textarea id="editEventRemark" maxlength="200" placeholder="补充事件说明"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn secondary" type="button" id="cancelEditBtn">取消</button>
+                <button class="btn primary" type="button" id="saveEditBtn">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "countdown-events-v1";
+        const THEME_KEY = "countdown-theme-v1";
+        const APPEARANCE_KEY = "countdown-appearance-v1";
+        const SORT_FIELD_KEY = "countdown-sort-field-v1";
+        const SORT_ORDER_KEY = "countdown-sort-order-v1";
+        const THEMES = {
+            aurora: {
+                bg1: "#0f172a",
+                bg2: "#1e293b",
+                glow1: "rgba(96,165,250,.35)",
+                glow2: "rgba(139,92,246,.28)",
+                primary: "#60a5fa",
+                primary2: "#8b5cf6",
+                accentSoft1: "rgba(96,165,250,.22)",
+                accentSoft2: "rgba(139,92,246,.18)",
+                accentCard: "rgba(96,165,250,.08)",
+                accentCardHover: "rgba(96,165,250,.14)",
+                accentCardBorder: "rgba(96,165,250,.18)",
+                accentCardBorderHover: "rgba(96,165,250,.28)",
+                focusRing: "rgba(96,165,250,.15)",
+                focusBorder: "rgba(96,165,250,.7)",
+                cardHoverBorder: "rgba(96,165,250,.22)",
+                cardHoverBg: "rgba(255,255,255,.14)"
+            },
+            sunset: {
+                bg1: "#2b1632",
+                bg2: "#4a2744",
+                glow1: "rgba(251,113,133,.34)",
+                glow2: "rgba(245,158,11,.24)",
+                primary: "#fb7185",
+                primary2: "#f59e0b",
+                accentSoft1: "rgba(251,113,133,.22)",
+                accentSoft2: "rgba(245,158,11,.18)",
+                accentCard: "rgba(251,113,133,.08)",
+                accentCardHover: "rgba(251,113,133,.14)",
+                accentCardBorder: "rgba(251,113,133,.18)",
+                accentCardBorderHover: "rgba(251,113,133,.28)",
+                focusRing: "rgba(251,113,133,.16)",
+                focusBorder: "rgba(251,113,133,.72)",
+                cardHoverBorder: "rgba(245,158,11,.24)",
+                cardHoverBg: "rgba(255,255,255,.15)"
+            },
+            forest: {
+                bg1: "#0c1f1d",
+                bg2: "#183a37",
+                glow1: "rgba(52,211,153,.28)",
+                glow2: "rgba(20,184,166,.2)",
+                primary: "#34d399",
+                primary2: "#0f766e",
+                accentSoft1: "rgba(52,211,153,.2)",
+                accentSoft2: "rgba(15,118,110,.2)",
+                accentCard: "rgba(52,211,153,.08)",
+                accentCardHover: "rgba(52,211,153,.14)",
+                accentCardBorder: "rgba(52,211,153,.18)",
+                accentCardBorderHover: "rgba(52,211,153,.28)",
+                focusRing: "rgba(52,211,153,.16)",
+                focusBorder: "rgba(52,211,153,.72)",
+                cardHoverBorder: "rgba(52,211,153,.24)",
+                cardHoverBg: "rgba(255,255,255,.13)"
+            },
+            ocean: {
+                bg1: "#0b1b34",
+                bg2: "#123d6b",
+                glow1: "rgba(56,189,248,.28)",
+                glow2: "rgba(37,99,235,.22)",
+                primary: "#38bdf8",
+                primary2: "#2563eb",
+                accentSoft1: "rgba(56,189,248,.2)",
+                accentSoft2: "rgba(37,99,235,.18)",
+                accentCard: "rgba(56,189,248,.08)",
+                accentCardHover: "rgba(56,189,248,.14)",
+                accentCardBorder: "rgba(56,189,248,.18)",
+                accentCardBorderHover: "rgba(56,189,248,.28)",
+                focusRing: "rgba(56,189,248,.16)",
+                focusBorder: "rgba(56,189,248,.72)",
+                cardHoverBorder: "rgba(56,189,248,.24)",
+                cardHoverBg: "rgba(255,255,255,.14)"
+            },
+            festival: {
+                bg1: "#3a0f17",
+                bg2: "#7c2d12",
+                glow1: "rgba(248,113,113,.32)",
+                glow2: "rgba(250,204,21,.24)",
+                primary: "#ef4444",
+                primary2: "#f59e0b",
+                accentSoft1: "rgba(239,68,68,.22)",
+                accentSoft2: "rgba(245,158,11,.2)",
+                accentCard: "rgba(254,202,202,.08)",
+                accentCardHover: "rgba(248,113,113,.16)",
+                accentCardBorder: "rgba(248,113,113,.22)",
+                accentCardBorderHover: "rgba(250,204,21,.28)",
+                focusRing: "rgba(239,68,68,.16)",
+                focusBorder: "rgba(245,158,11,.72)",
+                cardHoverBorder: "rgba(250,204,21,.24)",
+                cardHoverBg: "rgba(255,248,220,.16)"
+            },
+            exam: {
+                bg1: "#101828",
+                bg2: "#1d4e89",
+                glow1: "rgba(99,102,241,.26)",
+                glow2: "rgba(34,197,94,.2)",
+                primary: "#6366f1",
+                primary2: "#22c55e",
+                accentSoft1: "rgba(99,102,241,.2)",
+                accentSoft2: "rgba(34,197,94,.18)",
+                accentCard: "rgba(129,140,248,.08)",
+                accentCardHover: "rgba(99,102,241,.14)",
+                accentCardBorder: "rgba(129,140,248,.18)",
+                accentCardBorderHover: "rgba(34,197,94,.28)",
+                focusRing: "rgba(99,102,241,.15)",
+                focusBorder: "rgba(99,102,241,.72)",
+                cardHoverBorder: "rgba(34,197,94,.22)",
+                cardHoverBg: "rgba(240,253,244,.12)"
+            },
+            tech: {
+                bg1: "#06131f",
+                bg2: "#132a4f",
+                glow1: "rgba(6,182,212,.3)",
+                glow2: "rgba(124,58,237,.22)",
+                primary: "#06b6d4",
+                primary2: "#7c3aed",
+                accentSoft1: "rgba(6,182,212,.2)",
+                accentSoft2: "rgba(124,58,237,.18)",
+                accentCard: "rgba(34,211,238,.08)",
+                accentCardHover: "rgba(6,182,212,.14)",
+                accentCardBorder: "rgba(34,211,238,.18)",
+                accentCardBorderHover: "rgba(124,58,237,.28)",
+                focusRing: "rgba(6,182,212,.16)",
+                focusBorder: "rgba(34,211,238,.72)",
+                cardHoverBorder: "rgba(34,211,238,.22)",
+                cardHoverBg: "rgba(224,242,254,.12)"
+            }
+        };
+        let currentMode = "datetime";
+        let events = loadEvents();
+
+        const tabs = document.querySelectorAll(".tab");
+        const themeButtons = document.querySelectorAll(".theme-btn");
+        const appearanceButtons = document.querySelectorAll(".mode-btn");
+        const modeDateEls = document.querySelectorAll(".mode-datetime");
+        const modeDurationEls = document.querySelectorAll(".mode-duration");
+
+        const eventNameEl = document.getElementById("eventName");
+        const targetYearEl = document.getElementById("targetYear");
+        const targetMonthEl = document.getElementById("targetMonth");
+        const targetDayEl = document.getElementById("targetDay");
+        const targetHourEl = document.getElementById("targetHour");
+        const targetMinuteEl = document.getElementById("targetMinute");
+        const targetYearPrevEl = document.getElementById("targetYearPrev");
+        const targetYearNextEl = document.getElementById("targetYearNext");
+        const targetMonthPrevEl = document.getElementById("targetMonthPrev");
+        const targetMonthNextEl = document.getElementById("targetMonthNext");
+        const targetDayPrevEl = document.getElementById("targetDayPrev");
+        const targetDayNextEl = document.getElementById("targetDayNext");
+        const targetHourPrevEl = document.getElementById("targetHourPrev");
+        const targetHourNextEl = document.getElementById("targetHourNext");
+        const targetMinutePrevEl = document.getElementById("targetMinutePrev");
+        const targetMinuteNextEl = document.getElementById("targetMinuteNext");
+        const daysEl = document.getElementById("days");
+        const daysPrevEl = document.getElementById("daysPrev");
+        const daysNextEl = document.getElementById("daysNext");
+        const hoursEl = document.getElementById("hours");
+        const hoursPrevEl = document.getElementById("hoursPrev");
+        const hoursNextEl = document.getElementById("hoursNext");
+        const minutesEl = document.getElementById("minutes");
+        const minutesPrevEl = document.getElementById("minutesPrev");
+        const minutesNextEl = document.getElementById("minutesNext");
+        const secondsEl = document.getElementById("seconds");
+        const secondsPrevEl = document.getElementById("secondsPrev");
+        const secondsNextEl = document.getElementById("secondsNext");
+        const eventRemarkEl = document.getElementById("eventRemark");
+        const eventListEl = document.getElementById("eventList");
+        const editModalEl = document.getElementById("editModal");
+        const editEventNameEl = document.getElementById("editEventName");
+        const editEventEndTimeEl = document.getElementById("editEventEndTime");
+        const editEventRemarkEl = document.getElementById("editEventRemark");
+        const editDateTimeFieldEl = document.getElementById("editDateTimeField");
+        const editDurationFieldEl = document.getElementById("editDurationField");
+        const editTimeLabelEl = document.getElementById("editTimeLabel");
+        const editDaysEl = document.getElementById("editDays");
+        const editHoursEl = document.getElementById("editHours");
+        const editMinutesEl = document.getElementById("editMinutes");
+        const editSecondsEl = document.getElementById("editSeconds");
+        const editModeButtons = document.querySelectorAll("[data-edit-mode]");
+        const sortFieldButtons = document.querySelectorAll("[data-sort-field]");
+        const sortOrderButtons = document.querySelectorAll("[data-sort-order]");
+
+        let currentSortField = localStorage.getItem(SORT_FIELD_KEY) || "endAt";
+        let currentSortOrder = localStorage.getItem(SORT_ORDER_KEY) || "asc";
+        let editingEventId = null;
+        let currentEditMode = "datetime";
+        let originalEditMode = "datetime";
+        let originalEditEndAt = 0;
+        let editDateTimeDirty = false;
+        let editDurationDirty = false;
+        let originalEditDateTimeValue = "";
+        let originalEditDurationValues = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+        const statTotalEl = document.getElementById("statTotal");
+        const statRunningEl = document.getElementById("statRunning");
+        const statFinishedEl = document.getElementById("statFinished");
+
+        document.getElementById("createBtn").addEventListener("click", createEvent);
+        document.getElementById("clearFinishedBtn").addEventListener("click", clearFinished);
+        document.getElementById("cancelEditBtn").addEventListener("click", closeEditModal);
+        document.getElementById("saveEditBtn").addEventListener("click", saveEditedEvent);
+        ["focus", "click", "input"].forEach(eventName => {
+            editEventEndTimeEl.addEventListener(eventName, () => syncEditDateTimeInput());
+        });
+        ["change", "blur"].forEach(eventName => {
+            editEventEndTimeEl.addEventListener(eventName, () => syncEditDateTimeInput({ forceClamp: true }));
+        });
+        ["input", "change"].forEach(eventName => {
+            editEventEndTimeEl.addEventListener(eventName, () => {
+                editDateTimeDirty = true;
+            });
+        });
+        [editDaysEl, editHoursEl, editMinutesEl, editSecondsEl].forEach(input => {
+            ["input", "change"].forEach(eventName => {
+                input.addEventListener(eventName, () => {
+                    editDurationDirty = true;
+                });
+            });
+        });
+        editModeButtons.forEach(button => {
+            button.addEventListener("click", () => switchEditMode(button.dataset.editMode || "datetime"));
+        });
+        sortFieldButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                currentSortField = button.dataset.sortField || "endAt";
+                localStorage.setItem(SORT_FIELD_KEY, currentSortField);
+                updateSortButtons();
+                render();
+            });
+        });
+
+        sortOrderButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                currentSortOrder = button.dataset.sortOrder || "asc";
+                localStorage.setItem(SORT_ORDER_KEY, currentSortOrder);
+                updateSortButtons();
+                render();
+            });
+        });
+
+        [targetYearEl, targetMonthEl, targetDayEl, targetHourEl, targetMinuteEl].forEach(input => {
+            input.addEventListener("input", sanitizeTimeTextInput);
+            input.addEventListener("change", () => syncDateTimePicker(input.dataset.part));
+            input.addEventListener("blur", () => syncDateTimePicker(input.dataset.part));
+        });
+
+        [daysEl, hoursEl, minutesEl, secondsEl].forEach(input => {
+            input.addEventListener("input", sanitizeTimeTextInput);
+            input.addEventListener("change", syncDurationPicker);
+            input.addEventListener("blur", syncDurationPicker);
+        });
+
+        themeButtons.forEach(button => {
+            button.addEventListener("click", () => applyTheme(button.dataset.theme));
+        });
+
+        appearanceButtons.forEach(button => {
+            button.addEventListener("click", () => applyAppearance(button.dataset.appearance));
+        });
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                currentMode = tab.dataset.mode;
+                tabs.forEach(t => t.classList.toggle("active", t === tab));
+                modeDateEls.forEach(el => el.classList.toggle("hidden", currentMode !== "datetime"));
+                modeDurationEls.forEach(el => el.classList.toggle("hidden", currentMode !== "duration"));
+            });
+        });
+
+        editModalEl.addEventListener("click", event => {
+            if (event.target === editModalEl) {
+                closeEditModal();
+            }
+        });
+
+        function loadEvents() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            } catch {
+                return [];
+            }
+        }
+
+        function saveEvents() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+        }
+
+        function updateSortButtons() {
+            sortFieldButtons.forEach(button => button.classList.toggle("active", button.dataset.sortField === currentSortField));
+            sortOrderButtons.forEach(button => button.classList.toggle("active", button.dataset.sortOrder === currentSortOrder));
+        }
+
+        function applyAppearance(appearance) {
+            const mode = appearance === "light" ? "light" : "dark";
+            document.body.classList.toggle("light-theme", mode === "light");
+            appearanceButtons.forEach(button => button.classList.toggle("active", button.dataset.appearance === mode));
+            localStorage.setItem(APPEARANCE_KEY, mode);
+        }
+
+        function applyTheme(themeName) {
+            const theme = THEMES[themeName] || THEMES.aurora;
+            const root = document.documentElement;
+
+            root.style.setProperty("--bg1", theme.bg1);
+            root.style.setProperty("--bg2", theme.bg2);
+            root.style.setProperty("--glow-1", theme.glow1);
+            root.style.setProperty("--glow-2", theme.glow2);
+            root.style.setProperty("--primary", theme.primary);
+            root.style.setProperty("--primary-2", theme.primary2);
+            root.style.setProperty("--accent-soft-1", theme.accentSoft1);
+            root.style.setProperty("--accent-soft-2", theme.accentSoft2);
+            root.style.setProperty("--accent-card", theme.accentCard);
+            root.style.setProperty("--accent-card-hover", theme.accentCardHover);
+            root.style.setProperty("--accent-card-border", theme.accentCardBorder);
+            root.style.setProperty("--accent-card-border-hover", theme.accentCardBorderHover);
+            root.style.setProperty("--focus-ring", theme.focusRing);
+            root.style.setProperty("--focus-border", theme.focusBorder);
+            root.style.setProperty("--card-hover-border", theme.cardHoverBorder);
+            root.style.setProperty("--card-hover-bg", theme.cardHoverBg);
+
+            themeButtons.forEach(button => button.classList.toggle("active", button.dataset.theme === themeName));
+            localStorage.setItem(THEME_KEY, themeName);
+        }
+
+        applyAppearance(localStorage.getItem(APPEARANCE_KEY) || "dark");
+        applyTheme(localStorage.getItem(THEME_KEY) || "aurora");
+
+        function pad(n) {
+            return String(n).padStart(2, "0");
+        }
+
+        function formatDateTime(ts) {
+            const d = new Date(ts);
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
+        function formatDateTimeLocalValue(ts) {
+            const d = new Date(ts);
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function setEditDateTimeValue(ts, defer = false) {
+            const nextValue = formatDateTimeLocalValue(ts);
+            const applyValue = () => {
+                editEventEndTimeEl.value = "";
+                editEventEndTimeEl.value = nextValue;
+            };
+
+            if (defer) {
+                requestAnimationFrame(applyValue);
+                return;
+            }
+
+            applyValue();
+        }
+
+        function getNextValidMinute() {
+            const next = new Date(Date.now() + 60 * 1000);
+            next.setSeconds(0, 0);
+            return next;
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function sanitizeTimeTextInput(event) {
+            const digits = Number(event.target.dataset.digits || event.target.maxLength || 2);
+            event.target.value = event.target.value.replace(/\D/g, "").slice(0, digits);
+        }
+
+        function getInputNumberValue(inputEl, fallback) {
+            const value = Number(inputEl.value);
+            return Number.isFinite(value) ? value : fallback;
+        }
+
+        function formatSpinnerValue(inputEl, value) {
+            if (inputEl.dataset.durationPart === "days") {
+                return String(value);
+            }
+
+            const digits = Number(inputEl.dataset.digits || 2);
+            return String(value).padStart(digits, "0");
+        }
+
+        function setInputDisplayValue(inputEl, value) {
+            inputEl.value = formatSpinnerValue(inputEl, value);
+        }
+
+        function updateSpinnerPreview(inputEl, prevEl, nextEl) {
+            const value = getInputNumberValue(inputEl, NaN);
+            const min = Number(inputEl.dataset.min || 0);
+            const max = Number(inputEl.dataset.max || 59);
+            const prevValue = Number.isFinite(value) && value > min ? formatSpinnerValue(inputEl, value - 1) : formatSpinnerValue(inputEl, min);
+            const nextValue = Number.isFinite(value) && value < max ? formatSpinnerValue(inputEl, value + 1) : formatSpinnerValue(inputEl, max);
+
+            prevEl.textContent = prevValue;
+            nextEl.textContent = nextValue;
+            prevEl.classList.toggle("is-empty", !(Number.isFinite(value) && value > min));
+            nextEl.classList.toggle("is-empty", !(Number.isFinite(value) && value < max));
+        }
+
+        function syncDurationPicker() {
+            const configs = [
+                { input: daysEl, prev: daysPrevEl, next: daysNextEl, min: 0, max: 999 },
+                { input: hoursEl, prev: hoursPrevEl, next: hoursNextEl, min: 0, max: 23 },
+                { input: minutesEl, prev: minutesPrevEl, next: minutesNextEl, min: 0, max: 59 },
+                { input: secondsEl, prev: secondsPrevEl, next: secondsNextEl, min: 0, max: 59 }
+            ];
+
+            configs.forEach(({ input, prev, next, min, max }) => {
+                input.dataset.min = String(min);
+                input.dataset.max = String(max);
+                const value = clamp(getInputNumberValue(input, min), min, max);
+                setInputDisplayValue(input, value);
+                updateSpinnerPreview(input, prev, next);
+            });
+        }
+
+        function getDateTimeBounds(selectedDateStr) {
+            const minDate = getNextValidMinute();
+            return {
+                minDate,
+                minYear: minDate.getFullYear(),
+                minMonth: minDate.getMonth() + 1,
+                minDay: minDate.getDate(),
+                minHour: minDate.getHours(),
+                minMinute: minDate.getMinutes()
+            };
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        function getSelectedDateParts() {
+            return {
+                year: getInputNumberValue(targetYearEl, NaN),
+                month: getInputNumberValue(targetMonthEl, NaN),
+                day: getInputNumberValue(targetDayEl, NaN)
+            };
+        }
+
+        function syncDateTimePicker(source = "date") {
+            const bounds = getDateTimeBounds();
+            const maxYear = bounds.minYear + 20;
+            const current = getSelectedDateParts();
+
+            targetYearEl.dataset.min = String(bounds.minYear);
+            targetYearEl.dataset.max = String(maxYear);
+            let yearValue = clamp(current.year || bounds.minYear, bounds.minYear, maxYear);
+            setInputDisplayValue(targetYearEl, yearValue);
+
+            const minMonth = yearValue === bounds.minYear ? bounds.minMonth : 1;
+            targetMonthEl.dataset.min = String(minMonth);
+            targetMonthEl.dataset.max = "12";
+            let monthValue = clamp(current.month || minMonth, minMonth, 12);
+            setInputDisplayValue(targetMonthEl, monthValue);
+
+            const minDay = yearValue === bounds.minYear && monthValue === bounds.minMonth ? bounds.minDay : 1;
+            const maxDay = getDaysInMonth(yearValue, monthValue);
+            targetDayEl.dataset.min = String(minDay);
+            targetDayEl.dataset.max = String(maxDay);
+            let dayValue = clamp(current.day || minDay, minDay, maxDay);
+            setInputDisplayValue(targetDayEl, dayValue);
+
+            const isMinDate = yearValue === bounds.minYear && monthValue === bounds.minMonth && dayValue === bounds.minDay;
+            const hourCurrent = getInputNumberValue(targetHourEl, isMinDate ? bounds.minHour : 0);
+            const minuteCurrent = getInputNumberValue(targetMinuteEl, isMinDate ? bounds.minMinute : 0);
+
+            targetHourEl.dataset.min = String(isMinDate ? bounds.minHour : 0);
+            targetHourEl.dataset.max = "23";
+            let hourValue = clamp(hourCurrent, Number(targetHourEl.dataset.min), 23);
+            setInputDisplayValue(targetHourEl, hourValue);
+
+            const minuteMin = isMinDate && hourValue === bounds.minHour ? bounds.minMinute : 0;
+            targetMinuteEl.dataset.min = String(minuteMin);
+            targetMinuteEl.dataset.max = "59";
+            let minuteValue = clamp(minuteCurrent, minuteMin, 59);
+            if ((source === "year" || source === "month" || source === "day" || source === "hour") && isMinDate && hourValue === bounds.minHour && minuteCurrent < minuteMin) {
+                minuteValue = minuteMin;
+            }
+            setInputDisplayValue(targetMinuteEl, minuteValue);
+
+            updateSpinnerPreview(targetYearEl, targetYearPrevEl, targetYearNextEl);
+            updateSpinnerPreview(targetMonthEl, targetMonthPrevEl, targetMonthNextEl);
+            updateSpinnerPreview(targetDayEl, targetDayPrevEl, targetDayNextEl);
+            updateSpinnerPreview(targetHourEl, targetHourPrevEl, targetHourNextEl);
+            updateSpinnerPreview(targetMinuteEl, targetMinutePrevEl, targetMinuteNextEl);
+        }
+
+        function getSelectedDateTime() {
+            if (!targetYearEl.value || !targetMonthEl.value || !targetDayEl.value || !targetHourEl.value || !targetMinuteEl.value) {
+                return NaN;
+            }
+
+            return new Date(
+                Number(targetYearEl.value),
+                Number(targetMonthEl.value) - 1,
+                Number(targetDayEl.value),
+                Number(targetHourEl.value),
+                Number(targetMinuteEl.value),
+                0,
+                0
+            ).getTime();
+        }
+
+        function adjustTimeInput(inputEl, delta) {
+            const currentValue = getInputNumberValue(inputEl, 0);
+            const min = Number(inputEl.dataset.min || 0);
+            const max = Number(inputEl.dataset.max || 59);
+            setInputDisplayValue(inputEl, clamp(currentValue + delta, min, max));
+
+            if (inputEl.dataset.durationPart) {
+                syncDurationPicker();
+                return;
+            }
+
+            syncDateTimePicker(inputEl.dataset.part || "minute");
+        }
+
+        function bindDragNumberInput(inputEl) {
+            const wrapper = inputEl.closest(".time-spinner");
+            let startY = 0;
+            let lastStep = 0;
+            let dragging = false;
+
+            wrapper.addEventListener("wheel", event => {
+                event.preventDefault();
+                adjustTimeInput(inputEl, event.deltaY < 0 ? -1 : 1);
+            }, { passive: false });
+
+            wrapper.addEventListener("pointerdown", event => {
+                dragging = true;
+                startY = event.clientY;
+                lastStep = 0;
+                wrapper.classList.add("dragging");
+                wrapper.setPointerCapture(event.pointerId);
+            });
+
+            wrapper.addEventListener("pointermove", event => {
+                if (!dragging) return;
+
+                const delta = event.clientY - startY;
+                const nextStep = Math.trunc(delta / 18);
+                const change = nextStep - lastStep;
+
+                if (change !== 0) {
+                    adjustTimeInput(inputEl, change);
+                    lastStep = nextStep;
+                }
+            });
+
+            const stopDragging = event => {
+                if (!dragging) return;
+                dragging = false;
+                wrapper.classList.remove("dragging");
+                if (typeof event.pointerId === "number") {
+                    wrapper.releasePointerCapture(event.pointerId);
+                }
+            };
+
+            wrapper.addEventListener("pointerup", stopDragging);
+            wrapper.addEventListener("pointercancel", stopDragging);
+        }
+
+        function formatRemain(ms) {
+            if (ms <= 0) return "00天 00:00:00";
+            const totalSec = Math.floor(ms / 1000);
+            const days = Math.floor(totalSec / 86400);
+            const hours = Math.floor((totalSec % 86400) / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+            return `${pad(days)}天 ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        function setDefaultDateTime() {
+            const defaultDate = new Date(Date.now() + 10 * 60 * 1000);
+            defaultDate.setSeconds(0, 0);
+            setInputDisplayValue(targetYearEl, defaultDate.getFullYear());
+            setInputDisplayValue(targetMonthEl, defaultDate.getMonth() + 1);
+            setInputDisplayValue(targetDayEl, defaultDate.getDate());
+            setInputDisplayValue(targetHourEl, defaultDate.getHours());
+            setInputDisplayValue(targetMinuteEl, defaultDate.getMinutes());
+            syncDateTimePicker();
+        }
+
+        function splitDuration(ms) {
+            const safeMs = Math.max(ms, 0);
+            const totalSec = Math.floor(safeMs / 1000);
+            return {
+                days: Math.floor(totalSec / 86400),
+                hours: Math.floor((totalSec % 86400) / 3600),
+                minutes: Math.floor((totalSec % 3600) / 60),
+                seconds: totalSec % 60
+            };
+        }
+
+        function getEditDurationMs() {
+            const days = Math.max(Number(editDaysEl.value || 0), 0);
+            const hours = Math.min(Math.max(Number(editHoursEl.value || 0), 0), 23);
+            const minutes = Math.min(Math.max(Number(editMinutesEl.value || 0), 0), 59);
+            const seconds = Math.min(Math.max(Number(editSecondsEl.value || 0), 0), 59);
+            return (((days * 24 + hours) * 60 + minutes) * 60 + seconds) * 1000;
+        }
+
+        function setEditDurationValues(ms) {
+            const { days, hours, minutes, seconds } = splitDuration(ms);
+            editDaysEl.value = days;
+            editHoursEl.value = hours;
+            editMinutesEl.value = minutes;
+            editSecondsEl.value = seconds;
+        }
+
+        function getEditDurationValues() {
+            return {
+                days: Math.max(Number(editDaysEl.value || 0), 0),
+                hours: Math.min(Math.max(Number(editHoursEl.value || 0), 0), 23),
+                minutes: Math.min(Math.max(Number(editMinutesEl.value || 0), 0), 59),
+                seconds: Math.min(Math.max(Number(editSecondsEl.value || 0), 0), 59)
+            };
+        }
+
+        function isSameDurationValues(a, b) {
+            return a.days === b.days && a.hours === b.hours && a.minutes === b.minutes && a.seconds === b.seconds;
+        }
+
+        function syncEditDateTimeInput(options = {}) {
+            const { forceClamp = false, preservePastValue = false } = options;
+            const minTs = getNextValidMinute().getTime();
+            const minValue = formatDateTimeLocalValue(minTs);
+            editEventEndTimeEl.min = minValue;
+
+            if (currentEditMode !== "datetime") {
+                return;
+            }
+
+            const currentTs = new Date(editEventEndTimeEl.value).getTime();
+            if (!editEventEndTimeEl.value || Number.isNaN(currentTs)) {
+                setEditDateTimeValue(minTs);
+                return;
+            }
+
+            if (currentTs < minTs) {
+                if (preservePastValue && !forceClamp) {
+                    return;
+                }
+
+                const safeTs = Math.max(currentTs || 0, minTs);
+                setEditDateTimeValue(safeTs);
+                return;
+            }
+
+            if (forceClamp) {
+                setEditDateTimeValue(currentTs);
+            }
+        }
+
+        function updateEditModeButtons() {
+            editModeButtons.forEach(button => button.classList.toggle("active", button.dataset.editMode === currentEditMode));
+            editDateTimeFieldEl.classList.toggle("hidden", currentEditMode !== "datetime");
+            editDurationFieldEl.classList.toggle("hidden", currentEditMode !== "duration");
+            editTimeLabelEl.textContent = currentEditMode === "datetime" ? "结束时间" : "剩余时长";
+        }
+
+        function switchEditMode(mode) {
+            const nextMode = mode === "duration" ? "duration" : "datetime";
+            if (currentEditMode !== nextMode) {
+                if (nextMode === "duration") {
+                    const endAt = new Date(editEventEndTimeEl.value).getTime();
+                    setEditDurationValues(Number.isNaN(endAt) ? 0 : Math.max(endAt - Date.now(), 0));
+                } else {
+                    if (originalEditEndAt <= Date.now() && !editDurationDirty) {
+                        setEditDateTimeValue(originalEditEndAt);
+                        syncEditDateTimeInput({ preservePastValue: true });
+                    } else {
+                        const durationMs = getEditDurationMs();
+                        setEditDateTimeValue(Date.now() + Math.max(durationMs, 60 * 1000));
+                        syncEditDateTimeInput({ forceClamp: true });
+                    }
+                }
+            }
+            currentEditMode = nextMode;
+            updateEditModeButtons();
+        }
+
+        function closeEditModal() {
+            editingEventId = null;
+            editModalEl.classList.add("hidden");
+        }
+
+        function openEditModal(id) {
+            const item = events.find(event => event.id === id);
+            if (!item) return;
+
+            editingEventId = id;
+            originalEditMode = item.mode === "duration" ? "duration" : "datetime";
+            originalEditEndAt = item.endAt;
+            editDateTimeDirty = false;
+            editDurationDirty = false;
+            editEventNameEl.value = item.name || "";
+            editEventRemarkEl.value = item.remark || "";
+            const initialEditTs = item.endAt;
+            setEditDateTimeValue(initialEditTs);
+            originalEditDateTimeValue = formatDateTimeLocalValue(initialEditTs);
+            currentEditMode = originalEditMode;
+            setEditDurationValues(Math.max(item.endAt - Date.now(), 0));
+            originalEditDurationValues = getEditDurationValues();
+            syncEditDateTimeInput({ preservePastValue: true });
+            updateEditModeButtons();
+            editModalEl.classList.remove("hidden");
+            setEditDateTimeValue(initialEditTs, true);
+            syncEditDateTimeInput({ preservePastValue: true });
+            editEventNameEl.focus();
+        }
+
+        function saveEditedEvent() {
+            const item = events.find(event => event.id === editingEventId);
+            if (!item) {
+                closeEditModal();
+                return;
+            }
+
+            const name = editEventNameEl.value.trim();
+            const remark = editEventRemarkEl.value.trim();
+            let endAt = 0;
+
+            if (!name) {
+                alert("请填写事件名称");
+                editEventNameEl.focus();
+                return;
+            }
+
+            const modeChanged = currentEditMode !== originalEditMode;
+            const dateTimeChanged = editDateTimeDirty || editEventEndTimeEl.value !== originalEditDateTimeValue;
+            const durationChanged = editDurationDirty || !isSameDurationValues(getEditDurationValues(), originalEditDurationValues);
+            const originalEventDone = originalEditEndAt <= Date.now();
+            const noTimeAdjustment = !dateTimeChanged && !durationChanged;
+
+            if (originalEventDone && noTimeAdjustment) {
+                endAt = originalEditEndAt;
+                item.name = name;
+                item.remark = remark;
+                item.mode = currentEditMode;
+                item.endAt = endAt;
+                saveEvents();
+                closeEditModal();
+                eventListEl.innerHTML = "";
+                render();
+                return;
+            }
+
+            if (currentEditMode === "datetime") {
+                if (!modeChanged && !dateTimeChanged) {
+                    endAt = originalEditEndAt;
+                } else {
+                    syncEditDateTimeInput({ forceClamp: true });
+                    endAt = new Date(editEventEndTimeEl.value).getTime();
+                    if (originalEventDone && (Number.isNaN(endAt) || endAt <= Date.now())) {
+                        endAt = originalEditEndAt;
+                    }
+                    if (Number.isNaN(endAt) || endAt <= Date.now()) {
+                        alert("结束时间必须晚于当前时间");
+                        editEventEndTimeEl.focus();
+                        return;
+                    }
+                }
+            } else {
+                if (!modeChanged && !durationChanged) {
+                    endAt = originalEditEndAt;
+                } else {
+                    const durationMs = getEditDurationMs();
+                    if (originalEventDone && durationMs <= 0) {
+                        endAt = originalEditEndAt;
+                    } else {
+                        if (durationMs <= 0) {
+                            alert("请输入大于 0 的剩余时长");
+                            editDaysEl.focus();
+                            return;
+                        }
+                        endAt = Date.now() + durationMs;
+                    }
+                }
+            }
+
+            item.name = name;
+            item.remark = remark;
+            item.mode = currentEditMode;
+            item.endAt = endAt;
+            saveEvents();
+            closeEditModal();
+            eventListEl.innerHTML = "";
+            render();
+        }
+
+        function createEvent() {
+            const name = eventNameEl.value.trim();
+            const remark = eventRemarkEl.value.trim();
+            const createdAt = Date.now();
+            let endAt = 0;
+
+            if (!name) {
+                alert("请填写事件名称");
+                eventNameEl.focus();
+                return;
+            }
+
+            if (currentMode === "datetime") {
+                syncDateTimePicker();
+                endAt = getSelectedDateTime();
+                if (isNaN(endAt) || endAt <= createdAt) {
+                    alert("目标时间必须晚于当前时间");
+                    syncDateTimePicker();
+                    return;
+                }
+            } else {
+                const d = Number(daysEl.value || 0);
+                const h = Number(hoursEl.value || 0);
+                const m = Number(minutesEl.value || 0);
+                const s = Number(secondsEl.value || 0);
+                const durationMs = (((d * 24 + h) * 60 + m) * 60 + s) * 1000;
+                if (durationMs <= 0) {
+                    alert("请输入大于 0 的倒计时时长");
+                    return;
+                }
+                endAt = createdAt + durationMs;
+            }
+
+            events.unshift({
+                id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+                name,
+                remark,
+                mode: currentMode,
+                createdAt,
+                endAt
+            });
+
+            saveEvents();
+            render();
+            eventNameEl.value = "";
+            eventRemarkEl.value = "";
+            daysEl.value = 0;
+            hoursEl.value = 0;
+            minutesEl.value = 10;
+            secondsEl.value = 0;
+            setDefaultDateTime();
+        }
+
+        function clearFinished() {
+            events = events.filter(item => item.endAt > Date.now());
+            saveEvents();
+            render();
+        }
+
+        function deleteEvent(id) {
+            events = events.filter(item => item.id !== id);
+            saveEvents();
+            render();
+        }
+
+        function renderStats() {
+            const now = Date.now();
+            const total = events.length;
+            const running = events.filter(e => e.endAt > now).length;
+            const finished = total - running;
+
+            statTotalEl.textContent = total;
+            statRunningEl.textContent = running;
+            statFinishedEl.textContent = finished;
+        }
+
+        function getSortedEvents() {
+            return [...events].sort((a, b) => {
+                const diff = (a[currentSortField] || 0) - (b[currentSortField] || 0);
+                return currentSortOrder === "desc" ? -diff : diff;
+            });
+        }
+
+        function getEventCardMarkup(item, now) {
+            const remain = item.endAt - now;
+            const done = remain <= 0;
+            const total = Math.max(item.endAt - item.createdAt, 1);
+            const passed = Math.min(Math.max(now - item.createdAt, 0), total);
+            const progress = Math.min((passed / total) * 100, 100);
+
+            return `
+                <article class="panel card ${done ? "is-done" : ""}" data-event-id="${item.id}">
+                    <div class="card-header">
+                        <div class="title">${escapeHtml(item.name)}</div>
+                        <div class="badge ${done ? "done" : "running"}">${done ? "已结束" : "进行中"}</div>
+                    </div>
+
+                    <div class="remain">${done ? "时间到" : formatRemain(remain)}</div>
+
+                    ${item.remark ? `<div class="remark">备注：${escapeHtml(item.remark)}</div>` : ""}
+
+                    <div class="meta">
+                        <div>结束时间：${formatDateTime(item.endAt)}</div>
+                        <div>创建时间：${formatDateTime(item.createdAt)}</div>
+                        <div>创建方式：${item.mode === "datetime" ? "按具体时间" : "按时长倒计时"}</div>
+                    </div>
+
+                    <div class="progress">
+                        <div class="bar" style="width:${progress}%"></div>
+                    </div>
+
+                    <div class="card-actions">
+                        <button class="btn mini edit" onclick="openEditModal('${item.id}')">编辑</button>
+                        <button class="btn mini danger" onclick="deleteEvent('${item.id}')">删除</button>
+                    </div>
+                </article>
+            `;
+        }
+
+        function updateEventCard(cardEl, item, now) {
+            const remain = item.endAt - now;
+            const done = remain <= 0;
+            const total = Math.max(item.endAt - item.createdAt, 1);
+            const passed = Math.min(Math.max(now - item.createdAt, 0), total);
+            const progress = Math.min((passed / total) * 100, 100);
+
+            const badgeEl = cardEl.querySelector(".badge");
+            const remainEl = cardEl.querySelector(".remain");
+            const barEl = cardEl.querySelector(".bar");
+
+            if (badgeEl) {
+                badgeEl.textContent = done ? "已结束" : "进行中";
+                badgeEl.classList.toggle("done", done);
+                badgeEl.classList.toggle("running", !done);
+            }
+
+            cardEl.classList.toggle("is-done", done);
+
+            if (remainEl) {
+                remainEl.textContent = done ? "时间到" : formatRemain(remain);
+            }
+
+            if (barEl) {
+                barEl.style.width = `${progress}%`;
+            }
+        }
+
+        function render() {
+            renderStats();
+
+            if (!events.length) {
+                eventListEl.innerHTML = `<div class="empty">暂无倒计时事件，先创建一个吧。</div>`;
+                return;
+            }
+
+            const now = Date.now();
+            const sortedEvents = getSortedEvents();
+            const currentIds = Array.from(eventListEl.querySelectorAll(".card[data-event-id]")).map(card => card.dataset.eventId);
+            const nextIds = sortedEvents.map(item => item.id);
+            const needsFullRender = currentIds.length !== nextIds.length || currentIds.some((id, index) => id !== nextIds[index]);
+
+            if (needsFullRender) {
+                eventListEl.innerHTML = sortedEvents.map(item => getEventCardMarkup(item, now)).join("");
+                return;
+            }
+
+            sortedEvents.forEach(item => {
+                const cardEl = eventListEl.querySelector(`.card[data-event-id="${item.id}"]`);
+                if (cardEl) {
+                    updateEventCard(cardEl, item, now);
+                }
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? "").replace(/[&<>"']/g, s => ({
+                "&":"&amp;",
+                "<":"&lt;",
+                ">":"&gt;",
+                "\"":"&quot;",
+                "'":"&#39;"
+            }[s]));
+        }
+
+        function formatWeekday(date) {
+            return new Intl.DateTimeFormat("zh-CN", {
+                weekday: "long"
+            }).format(date);
+        }
+
+        function formatLunarDay(dayNumber) {
+            const day = Number(dayNumber);
+            if (!Number.isFinite(day) || day <= 0) return "";
+
+            const dayMap = [
+                "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十",
+                "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
+                "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"
+            ];
+
+            return dayMap[day - 1] || "";
+        }
+
+        function formatLunarMonth(monthText) {
+            const raw = String(monthText || "").replace(/闰/g, "闰").trim();
+            if (/月/.test(raw) && /[正冬腊一二三四五六七八九十]/.test(raw)) {
+                return raw;
+            }
+
+            const isLeap = raw.startsWith("闰");
+            const numericText = raw.replace(/[^\d]/g, "");
+            const monthNumber = Number(numericText);
+            const monthMap = ["正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "冬月", "腊月"];
+            const monthName = monthMap[monthNumber - 1] || raw;
+            return isLeap ? `闰${monthName}` : monthName;
+        }
+
+        function formatLunarDate(date) {
+            try {
+                const formatter = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
+                    month: "long",
+                    day: "numeric"
+                });
+                const parts = formatter.formatToParts(date);
+                const monthText = parts.find(part => part.type === "month")?.value || "";
+                const dayText = parts.find(part => part.type === "day")?.value || "";
+                const lunarMonth = formatLunarMonth(monthText);
+                const lunarDay = formatLunarDay(dayText);
+                return `农历${lunarMonth}${lunarDay}`;
+            } catch {
+                return "农历暂不可用";
+            }
+        }
+
+        function updateNowClock() {
+            const now = new Date();
+            document.getElementById("nowClock").textContent =
+                `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            document.getElementById("todayText").textContent =
+                `${now.getFullYear()}年${pad(now.getMonth()+1)}月${pad(now.getDate())}日 · ${formatWeekday(now)}`;
+            document.getElementById("todayExtraText").textContent = formatLunarDate(now);
+        }
+
+        updateSortButtons();
+        setDefaultDateTime();
+        bindDragNumberInput(targetYearEl);
+        bindDragNumberInput(targetMonthEl);
+        bindDragNumberInput(targetDayEl);
+        bindDragNumberInput(targetHourEl);
+        bindDragNumberInput(targetMinuteEl);
+        bindDragNumberInput(daysEl);
+        bindDragNumberInput(hoursEl);
+        bindDragNumberInput(minutesEl);
+        bindDragNumberInput(secondsEl);
+        syncDurationPicker();
+        updateNowClock();
+        render();
+
+        setInterval(() => {
+            updateNowClock();
+            if (currentMode === "datetime") {
+                syncDateTimePicker();
+            }
+            render();
+        }, 1000);
+
+        window.deleteEvent = deleteEvent;
+        window.openEditModal = openEditModal;
+    </script>
+</body>
+</html>

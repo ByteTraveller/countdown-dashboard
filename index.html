@@ -78,7 +78,7 @@
             display:flex;
             flex-direction:column;
             justify-content:center;
-            gap:16px;
+            gap:10px;
         }
 
         h1{
@@ -146,6 +146,32 @@
             font-size:13px;
             line-height:1.7;
             letter-spacing:.02em;
+        }
+
+        .location-info{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:4px;
+            flex-wrap:wrap;
+            text-align:center;
+            color:var(--muted);
+            font-size:12px;
+            line-height:1.4;
+            min-height:18px;
+        }
+
+        .location-info > div{
+            white-space:nowrap;
+        }
+
+        .location-info > div:empty{
+            display:none;
+        }
+
+        .location-info > div + div::before{
+            content:"";
+            margin-right:0;
         }
 
         .form-wrap{
@@ -324,7 +350,8 @@
         }
 
         body.light-theme .today,
-        body.light-theme .today-extra{
+        body.light-theme .today-extra,
+        body.light-theme .location-info{
             color:#475569;
         }
 
@@ -1230,6 +1257,20 @@
             .time-spinner{
                 width:100%;
             }
+
+            .hero-right{
+                gap:12px;
+            }
+
+            .location-info{
+                flex-direction:column;
+                gap:4px;
+            }
+
+            .location-info > div + div::before{
+                content:none;
+                margin-right:0;
+            }
         }
     </style>
 </head>
@@ -1263,6 +1304,10 @@
                 <div class="clock" id="nowClock">00:00:00</div>
                 <div class="today" id="todayText">--</div>
                 <div class="today-extra" id="todayExtraText">--</div>
+                <div class="location-info" id="locationInfo">
+                    <div id="locationText">正在获取所在地...</div>
+                    <div id="timezoneText"></div>
+                </div>
             </div>
         </section>
 
@@ -1471,6 +1516,8 @@
         const APPEARANCE_KEY = "countdown-appearance-v1";
         const SORT_FIELD_KEY = "countdown-sort-field-v1";
         const SORT_ORDER_KEY = "countdown-sort-order-v1";
+        const LOCATION_CACHE_KEY = "countdown-location-cache-v1";
+        const LOCATION_CACHE_TTL = 6 * 60 * 60 * 1000;
         const THEMES = {
             aurora: {
                 bg1: "#0f172a",
@@ -1652,6 +1699,8 @@
         const editModeButtons = document.querySelectorAll("[data-edit-mode]");
         const sortFieldButtons = document.querySelectorAll("[data-sort-field]");
         const sortOrderButtons = document.querySelectorAll("[data-sort-order]");
+        const locationTextEl = document.getElementById("locationText");
+        const timezoneTextEl = document.getElementById("timezoneText");
 
         let currentSortField = localStorage.getItem(SORT_FIELD_KEY) || "endAt";
         let currentSortOrder = localStorage.getItem(SORT_ORDER_KEY) || "asc";
@@ -2500,6 +2549,203 @@
             }
         }
 
+        function joinLocationParts(parts) {
+            return parts
+                .map(part => String(part || "").trim())
+                .filter(part => part && !["-", "--", "null", "undefined"].includes(part.toLowerCase()))
+                .filter((part, index, array) => array.indexOf(part) === index)
+                .join(" · ");
+        }
+
+        function parseLocationResult(source, data, fallbackTimeZone) {
+            if (!data || typeof data !== "object") {
+                return null;
+            }
+
+            let country = "";
+            let region = "";
+            let city = "";
+            let zone = fallbackTimeZone;
+
+            if (source === "ipwho") {
+                if (data.success === false) return null;
+                country = data.country;
+                region = data.region || data.region_name;
+                city = data.city;
+                zone = data.timezone?.id || fallbackTimeZone;
+            } else if (source === "freeipapi") {
+                country = data.countryName;
+                region = data.regionName;
+                city = data.cityName;
+                zone = data.timeZone || fallbackTimeZone;
+            } else if (source === "ipapi") {
+                if (data.error) return null;
+                country = data.country_name;
+                region = data.region;
+                city = data.city;
+                zone = data.timezone || fallbackTimeZone;
+            } else {
+                return null;
+            }
+
+            const joined = joinLocationParts([country, region, city]);
+            if (!joined) {
+                return null;
+            }
+
+            const timeZoneId = zone || fallbackTimeZone || "未知时区";
+            const utcOffsetLabel = getUtcOffsetLabel(timeZoneId).replace(/[（）]/g, "") || "未知时区";
+
+            return {
+                locationText: `所在地：${joined}`,
+                timeZoneId,
+                timezoneText: `（${utcOffsetLabel}）`
+            };
+        }
+
+        function normalizeUtcOffsetLabel(rawLabel) {
+            const text = String(rawLabel || "").trim();
+            if (!text) return "";
+
+            const normalized = text.replace(/^GMT/i, "UTC");
+            if (/^UTC[+-]\d{1,2}$/.test(normalized)) {
+                const sign = normalized.includes("-") ? "-" : "+";
+                const hour = normalized.replace(/^UTC[+-]/, "").padStart(2, "0");
+                return `（UTC${sign}${hour}:00）`;
+            }
+
+            if (/^UTC[+-]\d{1,2}:\d{2}$/.test(normalized)) {
+                const [, sign, hour, minute] = normalized.match(/^UTC([+-])(\d{1,2}):(\d{2})$/) || [];
+                if (!sign) return "";
+                return `（UTC${sign}${hour.padStart(2, "0")}:${minute}）`;
+            }
+
+            return normalized.startsWith("UTC") ? `（${normalized}）` : "";
+        }
+
+        function getUtcOffsetLabel(timeZone) {
+            if (!timeZone || timeZone === "未知时区") {
+                return "";
+            }
+
+            try {
+                const formatter = new Intl.DateTimeFormat("en-US", {
+                    timeZone,
+                    timeZoneName: "shortOffset"
+                });
+                const offsetPart = formatter.formatToParts(new Date()).find(part => part.type === "timeZoneName")?.value || "";
+                return normalizeUtcOffsetLabel(offsetPart);
+            } catch {
+                if (timeZone === Intl.DateTimeFormat().resolvedOptions().timeZone) {
+                    const offsetMinutes = -new Date().getTimezoneOffset();
+                    const sign = offsetMinutes >= 0 ? "+" : "-";
+                    const absMinutes = Math.abs(offsetMinutes);
+                    const hours = String(Math.floor(absMinutes / 60)).padStart(2, "0");
+                    const minutes = String(absMinutes % 60).padStart(2, "0");
+                    return `（UTC${sign}${hours}:${minutes}）`;
+                }
+                return "";
+            }
+        }
+
+        function getCachedTimeZoneId(cached, localTimeZone) {
+            if (cached?.timeZoneId) {
+                return cached.timeZoneId;
+            }
+
+            const raw = String(cached?.timezoneText || "").replace(/^时区：/, "").replace(/[（）]/g, "").trim();
+            if (!raw) {
+                return localTimeZone;
+            }
+
+            return /^UTC/i.test(raw) ? localTimeZone : raw.trim() || localTimeZone;
+        }
+
+        async function fetchLocationJson(url, timeout = 5000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeout);
+
+            try {
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    cache: "no-store"
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                return await response.json();
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function updateLocationInfo() {
+            const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "未知时区";
+            timezoneTextEl.textContent = `（${getUtcOffsetLabel(localTimeZone).replace(/[（）]/g, "") || "未知时区"}）`;
+
+            try {
+                const cachedRaw = localStorage.getItem(LOCATION_CACHE_KEY);
+                if (cachedRaw) {
+                    const cached = JSON.parse(cachedRaw);
+                    if (cached.expiresAt > Date.now() && cached.locationText) {
+                        const cachedTimeZoneId = getCachedTimeZoneId(cached, localTimeZone);
+                        locationTextEl.textContent = cached.locationText;
+                        timezoneTextEl.textContent = `（${getUtcOffsetLabel(cachedTimeZoneId).replace(/[（）]/g, "") || "未知时区"}）`;
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn("读取所在地缓存失败：", error);
+            }
+
+            const apiConfigs = [
+                { name: "ipwho", url: "https://ipwho.is/?lang=zh" },
+                { name: "ipapi", url: "https://ipapi.co/json/" },
+                { name: "freeipapi", url: "https://freeipapi.com/api/json" }
+            ];
+
+            let lastError = null;
+
+            for (const api of apiConfigs) {
+                try {
+                    const data = await fetchLocationJson(api.url, 5000);
+                    const result = parseLocationResult(api.name, data, localTimeZone);
+
+                    if (!result) {
+                        throw new Error("定位结果为空");
+                    }
+
+                    locationTextEl.textContent = result.locationText;
+                    timezoneTextEl.textContent = result.timezoneText;
+
+                    try {
+                        localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({
+                            locationText: result.locationText,
+                            timezoneText: result.timezoneText,
+                            timeZoneId: result.timeZoneId,
+                            expiresAt: Date.now() + LOCATION_CACHE_TTL
+                        }));
+                    } catch (error) {
+                        console.warn("写入所在地缓存失败：", error);
+                    }
+
+                    return;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`定位接口不可用：${api.url}`, error);
+                }
+            }
+
+            locationTextEl.textContent = "所在地：暂时无法获取";
+            timezoneTextEl.textContent = `（${getUtcOffsetLabel(localTimeZone).replace(/[（）]/g, "") || "未知时区"}）`;
+
+            if (lastError) {
+                console.warn("所有定位接口均不可用，已回退为仅显示时区。", lastError);
+            }
+        }
+
         function updateNowClock() {
             const now = new Date();
             document.getElementById("nowClock").textContent =
@@ -2522,6 +2768,7 @@
         bindDragNumberInput(secondsEl);
         syncDurationPicker();
         updateNowClock();
+        updateLocationInfo();
         render();
 
         setInterval(() => {

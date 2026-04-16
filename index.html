@@ -722,6 +722,7 @@
             justify-items:center;
             align-items:center;
             overflow:hidden;
+            touch-action:none;
             transition:border-color .22s ease, background .22s ease, box-shadow .22s ease;
         }
 
@@ -804,6 +805,7 @@
             letter-spacing:0;
             cursor:ns-resize;
             display:block;
+            touch-action:none;
         }
 
         .time-spinner.year-spinner input{
@@ -1248,6 +1250,21 @@
                 flex-wrap:wrap;
             }
 
+            .spinner-group.date-group{
+                flex-direction:column;
+                gap:10px;
+                width:100%;
+                align-items:stretch;
+            }
+
+            .spinner-group.date-group .time-spinner,
+            .spinner-group.date-group .time-spinner.year-spinner,
+            .spinner-group.date-group .time-spinner.month-spinner,
+            .spinner-group.date-group .time-spinner.day-spinner{
+                width:100%;
+                min-width:0;
+            }
+
             .datetime-divider{
                 justify-content:flex-start;
                 min-height:0;
@@ -1256,6 +1273,18 @@
 
             .time-spinner{
                 width:100%;
+            }
+
+            .mode-duration .duration-combo{
+                display:flex;
+                flex-direction:column;
+                gap:10px;
+                align-items:stretch;
+            }
+
+            .mode-duration .duration-combo .time-spinner{
+                width:100%;
+                min-width:0;
             }
 
             .hero-right{
@@ -1456,8 +1485,8 @@
                         <button class="sort-btn" type="button" data-sort-field="createdAt">创建时间</button>
                     </div>
                 </div>
-                <div class="sort-group" aria-label="升降序">
-                    <label>升降序</label>
+                <div class="sort-group" aria-label="排序方式">
+                    <label>排序方式</label>
                     <div class="sort-options">
                         <button class="sort-btn active" type="button" data-sort-order="asc">升序</button>
                         <button class="sort-btn" type="button" data-sort-order="desc">降序</button>
@@ -2047,43 +2076,92 @@
             let lastStep = 0;
             let dragging = false;
 
+            const beginDrag = clientY => {
+                dragging = true;
+                startY = clientY;
+                lastStep = 0;
+                wrapper.classList.add("dragging");
+            };
+
+            const moveDrag = clientY => {
+                if (!dragging) return;
+
+                const delta = clientY - startY;
+                const nextStep = Math.trunc(delta / 18);
+                const change = nextStep - lastStep;
+
+                if (change !== 0) {
+                    adjustTimeInput(inputEl, -change);
+                    lastStep = nextStep;
+                }
+            };
+
+            const endDrag = () => {
+                if (!dragging) return;
+                dragging = false;
+                wrapper.classList.remove("dragging");
+            };
+
             wrapper.addEventListener("wheel", event => {
                 event.preventDefault();
                 adjustTimeInput(inputEl, event.deltaY < 0 ? -1 : 1);
             }, { passive: false });
 
-            wrapper.addEventListener("pointerdown", event => {
-                dragging = true;
-                startY = event.clientY;
-                lastStep = 0;
-                wrapper.classList.add("dragging");
-                wrapper.setPointerCapture(event.pointerId);
+            if (window.PointerEvent) {
+                wrapper.addEventListener("pointerdown", event => {
+                    event.preventDefault();
+                    beginDrag(event.clientY);
+                    wrapper.setPointerCapture(event.pointerId);
+                });
+
+                wrapper.addEventListener("pointermove", event => {
+                    if (!dragging) return;
+                    event.preventDefault();
+                    moveDrag(event.clientY);
+                });
+
+                const stopDragging = event => {
+                    if (!dragging) return;
+                    endDrag();
+                    if (typeof event.pointerId === "number" && wrapper.hasPointerCapture(event.pointerId)) {
+                        wrapper.releasePointerCapture(event.pointerId);
+                    }
+                };
+
+                wrapper.addEventListener("pointerup", stopDragging);
+                wrapper.addEventListener("pointercancel", stopDragging);
+                wrapper.addEventListener("lostpointercapture", endDrag);
+                return;
+            }
+
+            wrapper.addEventListener("touchstart", event => {
+                const touch = event.touches[0];
+                if (!touch) return;
+                event.preventDefault();
+                beginDrag(touch.clientY);
+            }, { passive: false });
+
+            wrapper.addEventListener("touchmove", event => {
+                if (!dragging) return;
+                const touch = event.touches[0];
+                if (!touch) return;
+                event.preventDefault();
+                moveDrag(touch.clientY);
+            }, { passive: false });
+
+            wrapper.addEventListener("touchend", () => {
+                endDrag();
             });
 
-            wrapper.addEventListener("pointermove", event => {
-                if (!dragging) return;
-
-                const delta = event.clientY - startY;
-                const nextStep = Math.trunc(delta / 18);
-                const change = nextStep - lastStep;
-
-                if (change !== 0) {
-                    adjustTimeInput(inputEl, change);
-                    lastStep = nextStep;
-                }
+            wrapper.addEventListener("touchcancel", () => {
+                endDrag();
             });
 
-            const stopDragging = event => {
-                if (!dragging) return;
-                dragging = false;
-                wrapper.classList.remove("dragging");
-                if (typeof event.pointerId === "number") {
-                    wrapper.releasePointerCapture(event.pointerId);
+            wrapper.addEventListener("mouseleave", () => {
+                if (dragging) {
+                    endDrag();
                 }
-            };
-
-            wrapper.addEventListener("pointerup", stopDragging);
-            wrapper.addEventListener("pointercancel", stopDragging);
+            });
         }
 
         function formatRemain(ms) {
